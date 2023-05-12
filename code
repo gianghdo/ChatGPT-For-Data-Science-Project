@@ -1,0 +1,273 @@
+Exploratory Data Analysis (EDA)
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load the loan dataset
+loan_df = pd.read_csv("loan_data.csv")
+
+loan_df.head()
+credit.policy
+purpose
+int.rate
+installment
+log.annual.inc
+dti
+fico
+days.with.cr.line
+revol.bal
+revol.util
+inq.last.6mths
+delinq.2yrs
+pub.rec
+not.fully.paid
+0
+1
+debt_consolidation
+0.1189
+829.1
+11.35040654
+19.48
+737
+5639.958333
+28854
+52.1
+0
+0
+0
+0
+1
+1
+credit_card
+0.1071
+228.22
+11.08214255
+14.29
+707
+2760
+33623
+76.7
+0
+0
+0
+0
+2
+1
+debt_consolidation
+0.1357
+366.86
+10.37349118
+11.63
+682
+4710
+3511
+25.6
+1
+0
+0
+0
+3
+1
+debt_consolidation
+0.1008
+162.34
+11.35040654
+8.1
+712
+2699.958333
+33667
+73.2
+1
+0
+0
+0
+4
+1
+credit_card
+0.1426
+102.92
+11.29973224
+14.97
+667
+4066
+4740
+39.5
+0
+1
+0
+0
+# Display the number of rows and columns in the dataset
+print("Number of rows and columns:", loan_df.shape)
+
+# Display summary statistics for numerical variables
+print(loan_df.describe())
+Number of rows and columns: (9578, 14)
+       credit.policy     int.rate  ...      pub.rec  not.fully.paid
+count    9578.000000  9578.000000  ...  9578.000000     9578.000000
+mean        0.804970     0.122640  ...     0.062122        0.160054
+std         0.396245     0.026847  ...     0.262126        0.366676
+min         0.000000     0.060000  ...     0.000000        0.000000
+25%         1.000000     0.103900  ...     0.000000        0.000000
+50%         1.000000     0.122100  ...     0.000000        0.000000
+75%         1.000000     0.140700  ...     0.000000        0.000000
+max         1.000000     0.216400  ...     5.000000        1.000000
+
+[8 rows x 13 columns]
+# Display the number of missing values in each column
+print(loan_df.isnull().sum())
+credit.policy        0
+purpose              0
+int.rate             0
+installment          0
+log.annual.inc       0
+dti                  0
+fico                 0
+days.with.cr.line    0
+revol.bal            0
+revol.util           0
+inq.last.6mths       0
+delinq.2yrs          0
+pub.rec              0
+not.fully.paid       0
+dtype: int64
+# Visualize the distribution of the target variable
+sns.countplot(x="not.fully.paid", data=loan_df)
+plt.show()
+
+# Visualize the correlation between variables
+corr = loan_df.corr()
+sns.heatmap(corr, annot=True, cmap="coolwarm")
+plt.show()
+
+# Visualize the distribution of loan purpose
+sns.countplot(x="purpose", data=loan_df)
+plt.xticks(rotation=90)
+plt.show()
+
+# Visualize the distribution of interest rates by loan purpose
+sns.boxplot(x="purpose", y="int.rate", data=loan_df)
+plt.xticks(rotation=90)
+plt.show()
+
+Feature Engineering
+# Perform feature engineering
+loan_df["installment_to_income_ratio"] = (
+    loan_df["installment"] / loan_df["log.annual.inc"]
+)
+loan_df["credit_history"] = (loan_df["delinq.2yrs"] + loan_df["pub.rec"]) / loan_df[
+    "fico"
+]
+Preprocessing and Balancing the Data
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+# Drop unnecessary columns
+loan_df = loan_df.drop(['credit.policy', 'days.with.cr.line', 'purpose'], axis=1)
+
+# Convert categorical variables to numerical using LabelEncoder
+le = LabelEncoder()
+loan_df['not.fully.paid'] = le.fit_transform(loan_df['not.fully.paid'])
+# Scale the numerical variables using StandardScaler
+scaler = StandardScaler()
+numerical_cols = ['int.rate', 'installment', 'log.annual.inc', 'dti', 'fico', 'revol.bal', 'revol.util', 'inq.last.6mths', 'delinq.2yrs', 'pub.rec','credit_history','installment_to_income_ratio']
+loan_df[numerical_cols] = scaler.fit_transform(loan_df[numerical_cols])
+# Handle class imbalance by oversampling the minority class
+from imblearn.over_sampling import SMOTE
+
+sm = SMOTE(random_state=42)
+
+X = loan_df.drop('not.fully.paid', axis=1)
+y = loan_df['not.fully.paid']
+
+X_resampled, y_resampled = sm.fit_resample(X, y)
+
+loan_df = pd.concat([X_resampled, y_resampled], axis=1)
+loan_df['not.fully.paid'].value_counts()
+0    8045
+1    8045
+Name: not.fully.paid, dtype: int64
+Model Selection
+from sklearn.model_selection import train_test_split
+
+# Split the dataset into training and testing sets
+X = loan_df.drop('not.fully.paid', axis=1)
+y = loan_df['not.fully.paid']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+from sklearn.tree import DecisionTreeClassifier
+# Fit and evaluate decision tree classifier
+dt = DecisionTreeClassifier(random_state=42)
+dt.fit(X_train, y_train)
+dt_score = dt.score(X_test, y_test)
+print("Decision Tree Classifier Accuracy: {:.2f}%".format(dt_score*100))
+Decision Tree Classifier Accuracy: 81.21%
+from sklearn.ensemble import RandomForestClassifier
+
+# Fit and evaluate random forest classifier
+rf = RandomForestClassifier(random_state=42)
+rf.fit(X_train, y_train)
+rf_score = rf.score(X_test, y_test)
+print("Random Forest Classifier Accuracy: {:.2f}%".format(rf_score*100))
+Random Forest Classifier Accuracy: 89.14%
+from sklearn.linear_model import LogisticRegression
+
+# Fit and evaluate logistic regression classifier
+lr = LogisticRegression(random_state=42)
+lr.fit(X_train, y_train)
+lr_score = lr.score(X_test, y_test)
+print("Logistic Regression Classifier Accuracy: {:.2f}%".format(lr_score*100))
+Logistic Regression Classifier Accuracy: 61.32%
+from sklearn.svm import SVC
+
+# Fit and evaluate support vector machine classifier
+svm = SVC(random_state=42)
+svm.fit(X_train, y_train)
+svm_score = svm.score(X_test, y_test)
+print("Support Vector Machine Classifier Accuracy: {:.2f}%".format(svm_score*100))
+Support Vector Machine Classifier Accuracy: 66.54%
+Hyperparameter Tuning and Model Evaluation
+from sklearn.model_selection import GridSearchCV
+# Define the parameter grid for hyperparameter tuning
+param_grid = {
+    'n_estimators': [100, 200, 300],
+    'max_depth': [10, 20, 30, None],
+    'min_samples_split': [2, 5, 10],
+    'min_samples_leaf': [1, 2, 4]
+}
+
+# Perform grid search with cross-validation to find the best hyperparameters
+grid_search = GridSearchCV(rf, param_grid, cv=5, scoring='f1')
+# grid_search.fit(X_train, y_train)
+
+# Get the best model and its hyperparameters
+# best_params = grid_search.best_params_
+## n_estimators:200, max_depth:20, min_samples_split:10, min_samples_leaf:1
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+best_model = RandomForestClassifier(n_estimators=200, max_depth=20, min_samples_split=10, min_samples_leaf=1, random_state=42)
+
+best_model.fit(X_train, y_train)
+
+# Evaluate the best model on the testing set
+y_pred = best_model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred)
+
+# Print the results
+print("Random Forest Classifier Evaluation Results:")
+print("Accuracy: {:.2f}%".format(accuracy * 100))
+print("Precision: {:.2f}%".format(precision * 100))
+print("Recall: {:.2f}%".format(recall * 100))
+print("F1 Score: {:.2f}%".format(f1 * 100))
+Random Forest Classifier Evaluation Results:
+Accuracy: 86.08%
+Precision: 86.89%
+Recall: 84.56%
+F1 Score: 85.71%
+Saving the Model and Scaler
+import joblib
+# Save the best model to disk
+joblib.dump(best_model, 'loan_classifier.joblib')
+['loan_classifier.joblib']
+# Save the scalar to disk
+joblib.dump(scaler, 'std_scaler.bin')
+['std_scaler.bin']
